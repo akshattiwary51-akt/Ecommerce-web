@@ -20,6 +20,28 @@ app.get('/', (req, res) => {
   res.send("Shopease API is running successfully!");
 });
 
+// server.js
+
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174', // Add the new port here
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+  credentials: true
+}));
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -33,6 +55,19 @@ if (process.env.NODE_ENV === 'development') app.use(morgan('dev'))
 
 // Apply to all API routes
 app.use('/api', limiter);*/
+
+const webhookRoutes = require('./routes/webhook.routes')
+
+// ⚠️ RAW body needed for signature verification — MUST come before express.json()
+app.use('/api/webhooks', webhookRoutes)
+
+// Normal JSON parser for the rest of the app
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+// ...your other routes
+app.use('/api/payment', require('./routes/payment.routes'))
+app.use('/api/orders',  require('./routes/order.routes'))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)
