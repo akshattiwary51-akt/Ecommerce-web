@@ -96,28 +96,6 @@ exports.cancelOrder = async (req, res, next) => {
   } catch (err) { next(err) }
 }
 
-// Admin: fetch all orders with pagination
-exports.getAllOrders = async (req, res, next) => {
-  try {
-    const page  = parseInt(req.query.page)  || 1
-    const limit = parseInt(req.query.limit) || 20
-    const skip  = (page - 1) * limit
-    const filter = {}
-    if (req.query.status) filter.status = req.query.status
-
-    const [orders, total] = await Promise.all([
-      Order.find(filter)
-        .populate('user', 'name email')
-        .populate('items.product', 'name images')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Order.countDocuments(filter),
-    ])
-    res.json({ orders, total, page, pages: Math.ceil(total / limit) })
-  } catch (err) { next(err) }
-}
-
 exports.requestReturn = async (req, res, next) => {
   try {
     const { orderId, reason } = req.body

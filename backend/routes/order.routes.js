@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const {
   placeOrder, getOrders, getOrderById,
-  updateOrderStatus, cancelOrder, requestReturn, getAllOrders,
+  updateOrderStatus, cancelOrder, requestReturn,
 } = require('../controllers/order.controller')
 const { protect, isAdmin } = require('../middleware/auth.middleware')
 const validate = require('../middleware/validate.middleware')
@@ -18,7 +18,6 @@ const orderRules = [
 router.use(protect)
 router.post('/',              orderRules, validate, placeOrder)
 router.get('/',               getOrders)
-router.get('/admin/all',      isAdmin,    getAllOrders)   // admin: all orders
 router.get('/:id',            getOrderById)
 router.post('/return',        requestReturn)
 router.put('/:id/cancel',     cancelOrder)

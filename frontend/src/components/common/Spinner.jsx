@@ -14,8 +14,6 @@ export function Spinner({ size = 24, center = false }) {
   return el
 }
 
-export default Spinner
-
 export function Pagination({ page, pages, onChange }) {
   if (pages <= 1) return null
   return (
