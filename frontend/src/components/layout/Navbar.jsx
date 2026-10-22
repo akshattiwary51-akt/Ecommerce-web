@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi'
+import { FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage, FiSettings } from 'react-icons/fi'
 import { logout } from '../../store/slices/authSlice'
 import toast from 'react-hot-toast'
 
@@ -61,12 +61,17 @@ export default function Navbar() {
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Link to="/orders" style={{ padding: '8px', color: '#64748b', display: 'flex' }}>
+              <Link to="/orders" style={{ padding: '8px', color: '#64748b', display: 'flex' }} title="Orders">
                 <FiPackage size={20} />
               </Link>
-              <Link to="/profile" style={{ padding: '8px', color: '#64748b', display: 'flex' }}>
+              <Link to="/profile" style={{ padding: '8px', color: '#64748b', display: 'flex' }} title="Profile">
                 <FiUser size={20} />
               </Link>
+              {user?.role === 'admin' && (
+                <Link to="/admin" style={{ padding: '8px', color: '#7c3aed', display: 'flex' }} title="Admin">
+                  <FiSettings size={20} />
+                </Link>
+              )}
               <button onClick={handleLogout} style={{ padding: '8px', color: '#64748b', background: 'none', border: 'none', display: 'flex' }}>
                 <FiLogOut size={20} />
               </button>

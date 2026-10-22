@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 // Layout & Common
 import Layout from './components/layout/Layout';
 import PrivateRoute from './components/common/PrivateRoute';
+import AdminRoute from './components/common/AdminRoute';
 
 // Pages
 import Home from './pages/Home/Home';
@@ -18,50 +19,60 @@ import OrderDetail from './pages/Orders/OrderDetail';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Profile from './pages/Profile/Profile';
+import Wishlist from './pages/Wishlist/Wishlist';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminOrders from './pages/Admin/AdminOrders';
+import AdminProducts from './pages/Admin/AdminProducts';
 
 // Actions
 import { loadUser, clearError } from './store/slices/authSlice';
 import { fetchCart } from './store/slices/cartSlice';
+import { fetchWishlist } from './store/slices/wishlistSlice';
 
 export default function App() {
   const dispatch = useDispatch();
-  
-  // Get auth state to use as guards
-  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+  const { token, user } = useSelector((state) => state.auth);
 
-  // 1. Load User on Mount (with Guards)
+  // Load user on mount — only if a token exists (prevents 401 loop)
   useEffect(() => {
-    // Only fetch if we aren't already authenticated, not currently loading, and have no error
-    if (!isAuthenticated && !loading && !error) {
-      dispatch(loadUser());
-    }
-  }, [dispatch, isAuthenticated, loading, error]);
+    dispatch(loadUser());
+  }, [dispatch]);
 
-  // 2. Fetch Cart only when User is Authenticated
+  // Fetch cart + wishlist once authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (token) {
       dispatch(fetchCart());
+      dispatch(fetchWishlist());
     }
-  }, [dispatch, isAuthenticated]);
+  }, [dispatch, token]);
 
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         <Route path="/" element={<Layout />}>
+          {/* Public */}
           <Route index element={<Home />} />
           <Route path="products" element={<Products />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
-          
-          {/* Protected Routes */}
+
+          {/* Authenticated */}
           <Route element={<PrivateRoute />}>
             <Route path="checkout" element={<Checkout />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<OrderDetail />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="wishlist" element={<Wishlist />} />
+          </Route>
+
+          {/* Admin only */}
+          <Route element={<AdminRoute />}>
+            <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/orders" element={<AdminOrders />} />
+            <Route path="admin/products" element={<AdminProducts />} />
           </Route>
         </Route>
       </Routes>

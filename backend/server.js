@@ -1,91 +1,59 @@
-console.log("🚀 Server.js is executing...");
 require('dotenv').config()
 const express = require('express')
-const mongoose = require('mongoose');
 const cors = require('cors')
 const morgan = require('morgan')
-const rateLimit = require('express-rate-limit')
 const connectDB = require('./config/db')
-
-const authRoutes = require('./routes/auth.routes')
-const productRoutes = require('./routes/product.routes')
-const cartRoutes = require('./routes/cart.routes')
-const orderRoutes = require('./routes/order.routes')
-const paymentRoutes = require('./routes/payment.routes')
-const wishlistRoutes = require('./routes/wishlist.routes')
 const errorHandler = require('./middleware/error.middleware')
 
 const app = express()
-app.get('/', (req, res) => {
-  res.send("Shopease API is running successfully!");
-});
 
-// server.js
-
-
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174', // Add the new port here
-  'http://localhost:3000'
-];
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// In development accept every localhost port (Vite picks dynamically).
+// In production restrict to the comma-separated CLIENT_URL env variable.
+const isDev = process.env.NODE_ENV !== 'production'
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean)
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or Postman)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'), false);
-    }
+  origin (origin, callback) {
+    if (!origin) return callback(null, true)                              // curl / Postman / mobile
+    if (isDev && /^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS blocked: ${origin}`))
   },
-  credentials: true
-}));
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-if (process.env.NODE_ENV === 'development') app.use(morgan('dev'))
+  credentials: true,
+}))
 
-/*const limiter = rateLimit({ 
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5000, // Increase this to 5000 for development
-    message: "Too many requests, please try again later."
-});
-
-// Apply to all API routes
-app.use('/api', limiter);*/
-
+// ── Stripe webhook — raw body MUST come before express.json() ────────────────
 const webhookRoutes = require('./routes/webhook.routes')
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes)
 
-// ⚠️ RAW body needed for signature verification — MUST come before express.json()
-app.use('/api/webhooks', webhookRoutes)
-
-// Normal JSON parser for the rest of the app
+// ── Body parsers ──────────────────────────────────────────────────────────────
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+if (isDev) app.use(morgan('dev'))
 
-// ...your other routes
-app.use('/api/payment', require('./routes/payment.routes'))
-app.use('/api/orders',  require('./routes/order.routes'))
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/api/health', (_, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }))
+app.get('/',           (_, res) => res.send('ShopEase API is running'))
 
-app.use('/api/auth', authRoutes)
-app.use('/api/products', productRoutes)
-app.use('/api/cart', cartRoutes)
-app.use('/api/orders', orderRoutes)
-app.use('/api/payments', paymentRoutes)
-app.use('/api/wishlist', wishlistRoutes)
-app.use(cors());
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }))
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth',     require('./routes/auth.routes'))
+app.use('/api/products', require('./routes/product.routes'))
+app.use('/api/cart',     require('./routes/cart.routes'))
+app.use('/api/orders',   require('./routes/order.routes'))
+app.use('/api/payments', require('./routes/payment.routes'))
+app.use('/api/wishlist', require('./routes/wishlist.routes'))
 
+// ── Global error handler ──────────────────────────────────────────────────────
 app.use(errorHandler)
 
-const PORT = process.env.PORT || 5000;
-
+// ── Start ─────────────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000
 const startServer = async () => {
-  await connectDB();  // Ensure DB is connected first
-  app.listen(PORT, () => {
-    console.log(`📡 Server is running on port ${PORT}`);
-  });
-};
-startServer();
+  await connectDB()
+  app.listen(PORT, () => console.log(`📡 Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`))
+}
+startServer()

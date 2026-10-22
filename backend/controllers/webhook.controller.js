@@ -1,6 +1,12 @@
 const crypto = require('crypto')
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-const Order = require('../models/Order')
+const Order  = require('../models/Order')
+
+// Lazy init — avoids crashing the server when STRIPE_SECRET_KEY is not set
+const getStripe = () => {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key || key.startsWith('sk_test_your')) throw new Error('STRIPE_SECRET_KEY not configured')
+  return require('stripe')(key)
+}
 
 // ============== STRIPE ==============
 exports.stripeWebhook = async (req, res) => {
@@ -8,6 +14,7 @@ exports.stripeWebhook = async (req, res) => {
   let event
 
   try {
+    const stripe = getStripe()
     event = stripe.webhooks.constructEvent(
       req.body,                                  // raw Buffer (because we used express.raw)
       sig,
