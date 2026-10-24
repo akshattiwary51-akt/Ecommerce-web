@@ -109,3 +109,24 @@ exports.getCategories = async (req, res, next) => {
     res.json(categories)
   } catch (err) { next(err) }
 }
+
+// GET /api/products/suggest?q=iph   — fast autocomplete (max 8 results)
+exports.suggestProducts = async (req, res, next) => {
+  try {
+    const q = (req.query.q || '').trim()
+    if (!q || q.length < 2) return res.json([])
+
+    const results = await Product.find(
+      { name: { $regex: q, $options: 'i' } },
+      { name: 1, category: 1, 'images': { $slice: 1 }, discountPrice: 1, price: 1 }
+    ).limit(8).lean()
+
+    res.json(results.map((p) => ({
+      _id:      p._id,
+      name:     p.name,
+      category: p.category,
+      image:    p.images?.[0]?.url || null,
+      price:    p.discountPrice || p.price,
+    })))
+  } catch (err) { next(err) }
+}

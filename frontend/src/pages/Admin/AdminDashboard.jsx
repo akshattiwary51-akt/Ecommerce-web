@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiPackage, FiShoppingCart, FiUsers, FiDollarSign, FiTrendingUp } from 'react-icons/fi'
+import { FiPackage, FiShoppingCart, FiDollarSign, FiTag } from 'react-icons/fi'
 import api from '../../services/api'
 import Spinner from '../../components/common/Spinner'
 import { formatCurrency } from '../../utils/format'
@@ -65,6 +65,14 @@ export default function AdminDashboard() {
           <div>
             <p className="font-semibold text-gray-800">Manage Products</p>
             <p className="text-sm text-gray-500">Add, edit, delete products</p>
+          </div>
+        </Link>
+        <Link to="/admin/coupons"
+          className="flex items-center gap-3 p-5 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
+          <FiTag className="text-2xl text-green-600" />
+          <div>
+            <p className="font-semibold text-gray-800">Manage Coupons</p>
+            <p className="text-sm text-gray-500">Create discount codes</p>
           </div>
         </Link>
       </div>

@@ -49,12 +49,14 @@ cd ../frontend && npm install
 
 ### 2. Environment variables
 
-Create `backend/.env` and set `MONGO_URI` and `JWT_SECRET` at minimum. Set payment and Cloudinary credentials if using those integrations.
+```bash
+# Backend
+cp backend/.env.example backend/.env
+# Edit backend/.env — set MONGO_URI and JWT_SECRET at minimum
 
-Create `frontend/.env` and set:
-
-```
-VITE_API_BASE_URL=http://localhost:5000/api
+# Frontend
+cp frontend/.env.example frontend/.env
+# VITE_API_BASE_URL=http://localhost:5000/api  (already set)
 ```
 
 ### 3. Seed the database

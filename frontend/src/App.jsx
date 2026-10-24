@@ -3,10 +3,12 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 
+// Layout & Common
 import Layout from './components/layout/Layout';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
 
+// Pages
 import Home from './pages/Home/Home';
 import Products from './pages/Products/Products';
 import ProductDetail from './pages/ProductDetail/ProductDetail';
@@ -21,7 +23,9 @@ import Wishlist from './pages/Wishlist/Wishlist';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminOrders from './pages/Admin/AdminOrders';
 import AdminProducts from './pages/Admin/AdminProducts';
+import AdminCoupons from './pages/Admin/AdminCoupons';
 
+// Actions
 import { loadUser, clearError } from './store/slices/authSlice';
 import { fetchCart } from './store/slices/cartSlice';
 import { fetchWishlist } from './store/slices/wishlistSlice';
@@ -48,6 +52,7 @@ export default function App() {
       <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         <Route path="/" element={<Layout />}>
+          {/* Public */}
           <Route index element={<Home />} />
           <Route path="products" element={<Products />} />
           <Route path="products/:id" element={<ProductDetail />} />
@@ -55,6 +60,7 @@ export default function App() {
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
 
+          {/* Authenticated */}
           <Route element={<PrivateRoute />}>
             <Route path="checkout" element={<Checkout />} />
             <Route path="orders" element={<Orders />} />
@@ -63,10 +69,12 @@ export default function App() {
             <Route path="wishlist" element={<Wishlist />} />
           </Route>
 
+          {/* Admin only */}
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
-            <Route path="admin/orders" element={<AdminOrders />} />
+            <Route path="admin/orders"   element={<AdminOrders />} />
             <Route path="admin/products" element={<AdminProducts />} />
+            <Route path="admin/coupons"  element={<AdminCoupons />} />
           </Route>
         </Route>
       </Routes>

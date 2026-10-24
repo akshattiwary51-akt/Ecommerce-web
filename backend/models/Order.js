@@ -30,6 +30,7 @@ const orderSchema = new mongoose.Schema({
   subtotal:      { type: Number, required: true },
   tax:           { type: Number, default: 0 },
   discount:      { type: Number, default: 0 },
+  couponCode:    { type: String },
   total:         { type: Number, required: true },
   tracking:      [trackingSchema],
   returnRequest: {

@@ -1,10 +1,12 @@
-const Order = require('../models/Order')
+const Order  = require('../models/Order')
 const Product = require('../models/Product')
-const Cart = require('../models/Cart')
+const Cart   = require('../models/Cart')
+const Coupon = require('../models/Coupon')
+const { sendOrderConfirmation } = require('../utils/mailer')
 
 exports.placeOrder = async (req, res, next) => {
   try {
-    const { address, paymentMethod } = req.body
+    const { address, paymentMethod, couponCode } = req.body
 
     const cart = await Cart.findOne({ user: req.user._id })
       .populate('items.product', 'name price discountPrice images stockQty')
@@ -32,13 +34,39 @@ exports.placeOrder = async (req, res, next) => {
 
     const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
     const tax      = +(subtotal * 0.18).toFixed(2)
-    const total    = +(subtotal + tax).toFixed(2)
+
+    // ── Coupon ──────────────────────────────────────────────────────────────
+    let discount  = 0
+    let couponDoc = null
+    if (couponCode) {
+      couponDoc = await Coupon.findOne({ code: couponCode.toUpperCase().trim(), isActive: true })
+      if (couponDoc) {
+        const now = new Date()
+        const expired   = couponDoc.expiresAt && now > couponDoc.expiresAt
+        const overLimit = couponDoc.usageLimit !== null && couponDoc.usedCount >= couponDoc.usageLimit
+        if (!expired && !overLimit && subtotal >= couponDoc.minOrderValue) {
+          discount = +couponDoc.calcDiscount(subtotal + tax).toFixed(2)
+        }
+      }
+    }
+
+    const total = +(subtotal + tax - discount).toFixed(2)
 
     const order = await Order.create({
       user: req.user._id, items, address,
-      paymentMethod, subtotal, tax, total,
+      paymentMethod, subtotal, tax, discount,
+      couponCode: couponDoc ? couponDoc.code : undefined,
+      total,
       tracking: [{ status: 'pending', note: 'Order placed successfully' }],
     })
+
+    // Increment coupon usage
+    if (couponDoc) await Coupon.findByIdAndUpdate(couponDoc._id, { $inc: { usedCount: 1 } })
+
+    // Send confirmation email (non-blocking — don't fail the order if mail fails)
+    sendOrderConfirmation(req.user, order).catch((err) =>
+      console.error('[mailer] order confirmation failed:', err.message)
+    )
 
     // Clear cart
     await Cart.findByIdAndUpdate(cart._id, { items: [] })

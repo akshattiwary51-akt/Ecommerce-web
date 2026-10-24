@@ -6,7 +6,9 @@ import { clearCartItems } from '../../store/slices/cartSlice'
 import { useCart } from '../../hooks'
 import { formatCurrency } from '../../utils/format'
 import orderService from '../../services/orderService'
+import api from '../../services/api'
 import toast from 'react-hot-toast'
+import { FiTag, FiCheckCircle } from 'react-icons/fi'
 
 // ─── SDK loaders ─────────────────────────────────────────────────────────────
 // Bug 4 fix: dynamically inject SDK scripts only when needed, avoid polluting
@@ -48,13 +50,19 @@ export default function Checkout() {
   const [placedOrder, setPlacedOrder]     = useState(null)
   const [stripeReady, setStripeReady]     = useState(false)
 
+  // ── Coupon state ────────────────────────────────────────────────────────────
+  const [couponInput,    setCouponInput]    = useState('')
+  const [coupon,         setCoupon]         = useState(null)   // { code, discount }
+  const [couponLoading,  setCouponLoading]  = useState(false)
+
   // Stripe refs — we mount card element into a div without needing @stripe/react-stripe-js
   const stripeRef      = useRef(null)   // Stripe instance
   const cardElementRef = useRef(null)   // Stripe CardElement DOM instance
   const cardMountRef   = useRef(null)   // div to mount card element into
 
-  const tax   = subtotal * 0.18
-  const total = subtotal + tax
+  const tax      = subtotal * 0.18
+  const discount = coupon?.discount || 0
+  const total    = subtotal + tax - discount
 
   // ── Pre-load SDKs as soon as the user reaches step 1 (payment selection) ───
   useEffect(() => {
@@ -126,7 +134,7 @@ export default function Checkout() {
     try {
       // ─ Step 1: Create the DB order (status=pending, paymentStatus=pending)
       // Bug 7 fix: cart is NOT cleared here — only cleared after confirmed payment
-      const orderPayload = { address, paymentMethod }
+      const orderPayload = { address, paymentMethod, couponCode: coupon?.code }
       const newOrder     = await orderService.placeOrder(orderPayload)
       const orderId      = newOrder._id
 
@@ -564,13 +572,59 @@ export default function Checkout() {
                     +{items.length - 4} more items
                   </p>
                 )}
-                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10, marginTop: 4 }}>
+                {/* ── Coupon input ─────────────────────────────────── */}
+                <div style={{ marginTop: 12, marginBottom: 4 }}>
+                  {coupon ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 10px' }}>
+                      <FiCheckCircle style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12.5, color: '#15803d', flex: 1 }}>
+                        <strong>{coupon.code}</strong> — {formatCurrency(coupon.discount)} off
+                      </span>
+                      <button onClick={() => { setCoupon(null); setCouponInput('') }}
+                        style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                    </div>
+                  ) : (
+                    <form onSubmit={async (e) => {
+                      e.preventDefault()
+                      if (!couponInput.trim()) return
+                      setCouponLoading(true)
+                      try {
+                        const res = await api.post('/coupons/apply', { code: couponInput, orderTotal: subtotal + tax })
+                        setCoupon(res)
+                        toast.success(`Coupon applied — ${formatCurrency(res.discount)} off!`)
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || 'Invalid coupon')
+                      } finally { setCouponLoading(false) }
+                    }} style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <FiTag style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 13 }} />
+                        <input
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          placeholder="Coupon code"
+                          style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, fontSize: 12.5, border: '1px solid #e2e8f0', borderRadius: 7, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <button type="submit" disabled={couponLoading}
+                        style={{ padding: '7px 12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap', opacity: couponLoading ? 0.6 : 1 }}>
+                        {couponLoading ? '…' : 'Apply'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10, marginTop: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#64748b', marginBottom: 5 }}>
                     <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#64748b', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#64748b', marginBottom: 5 }}>
                     <span>Tax (18%)</span><span>{formatCurrency(tax)}</span>
                   </div>
+                  {discount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#16a34a', marginBottom: 5 }}>
+                      <span>Discount</span><span>−{formatCurrency(discount)}</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14 }}>
                     <span>Total</span><span style={{ color: '#2563eb' }}>{formatCurrency(total)}</span>
                   </div>

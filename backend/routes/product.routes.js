@@ -2,7 +2,7 @@ const router = require('express').Router()
 const multer = require('multer')
 const {
   getProducts, getProductById, createProduct, updateProduct,
-  deleteProduct, addReview, uploadImages, getCategories,
+  deleteProduct, addReview, uploadImages, getCategories, suggestProducts,
 } = require('../controllers/product.controller')
 const { protect, isAdmin } = require('../middleware/auth.middleware')
 const validate = require('../middleware/validate.middleware')
@@ -17,6 +17,7 @@ const reviewRules = [
 
 router.get('/',            getProducts)
 router.get('/categories',  getCategories)
+router.get('/suggest',     suggestProducts)
 router.get('/:id',         getProductById)
 router.post('/:id/reviews', protect, reviewRules, validate, addReview)
 router.post('/:id/images',  protect, isAdmin, upload.array('images', 5), uploadImages)
